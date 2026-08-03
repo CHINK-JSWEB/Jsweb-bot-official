@@ -1,0 +1,7 @@
+config.py
+jsweb.db
+__pycache__/
+*.pyc
+dashboard_sample.html
+test_*.py
+.env
