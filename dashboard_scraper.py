@@ -84,7 +84,7 @@ def _fetch_page(session: requests.Session, url: str, retries: int = 3) -> str:
     raise DashboardScrapeError(f"Failed to fetch {url} after {retries} tries: {last_error}")
 
 
-def scrape_services(max_pages: int = 40) -> list[dict]:
+def scrape_services(max_pages: int = 30) -> list[dict]:
     """Returns list of {local_id, panel_id, name, provider, price} — LAHAT ng pages."""
     session = _login()
     all_results = []
@@ -96,14 +96,20 @@ def scrape_services(max_pages: int = 40) -> list[dict]:
         html = _fetch_page(session, url)
         page_rows = _parse_rows(html)
 
-        logger.info(f"Page {page}: {len(page_rows)} rows found, total so far: {len(all_results)}")
+        new_ids = {r["local_id"] for r in page_rows} - seen_local_ids
+        logger.info(
+            f"Page {page}: {len(page_rows)} rows found, {len(new_ids)} new, "
+            f"total so far: {len(all_results)}"
+        )
 
         if not page_rows:
+            logger.info(f"Page {page} was empty — stopping (reached the end).")
             break
 
-        new_ids = {r["local_id"] for r in page_rows} - seen_local_ids
         if not new_ids:
-            break
+            logger.warning(f"Page {page} had no NEW ids (possibly stale/cached) — skipping but continuing.")
+            time.sleep(1.5)
+            continue
 
         for r in page_rows:
             if r["local_id"] not in seen_local_ids:
