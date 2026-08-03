@@ -41,6 +41,40 @@ class HealthHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"JSWEB bot is running.")
 
+    def do_POST(self):
+        if self.path != "/import_dashboard":
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        import json
+        import db
+        from config import IMPORT_SECRET
+
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length)
+
+        try:
+            data = json.loads(body)
+        except Exception:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(b"Invalid JSON")
+            return
+
+        if not IMPORT_SECRET or data.get("secret") != IMPORT_SECRET:
+            self.send_response(403)
+            self.end_headers()
+            self.wfile.write(b"Forbidden")
+            return
+
+        rows = data.get("rows", [])
+        db.sync_dashboard_services(rows)
+
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(f"Imported {len(rows)} rows".encode())
+
     def log_message(self, format, *args):
         pass
 

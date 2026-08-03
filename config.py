@@ -28,3 +28,5 @@ RECO_CHANNEL_ID = int(os.getenv("JSWEB_RECO_CHANNEL_ID", "0"))
 
 # ── Customer Service (Group button) ──────────────────────
 CUSTOMER_SERVICE_LINK = os.getenv("JSWEB_CS_LINK", "https://t.me/")
+# ── Import Secret (para sa Termux → Render dashboard sync) ──
+IMPORT_SECRET = os.getenv("JSWEB_IMPORT_SECRET", "")
