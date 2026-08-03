@@ -3,15 +3,17 @@ Scraper para sa jsweboosting.site admin panel.
 
 Naglo-login gamit ang requests session, tapos kinukuha lahat ng service rows
 mula sa Services page — LAHAT NG PAGES (naka-paginate ang listahan).
-Bawat <tr> doon ay may data-id (local ID) at data-api-service (z-smm.com
-panel ID) na magkatabi — kaya direkta na nating nakukuha ang tugma nila.
 """
 
 import re
+import time
+import logging
 import requests
 from bs4 import BeautifulSoup
 
 from config import ADMIN_PANEL_URL, ADMIN_PANEL_USERNAME, ADMIN_PANEL_PASSWORD, ADMIN_PANEL_PIN
+
+logger = logging.getLogger(__name__)
 
 
 class DashboardScrapeError(Exception):
@@ -20,13 +22,13 @@ class DashboardScrapeError(Exception):
 
 def _login() -> requests.Session:
     session = requests.Session()
-    session.get(ADMIN_PANEL_URL, timeout=20)
+    session.get(ADMIN_PANEL_URL, timeout=30)
     resp = session.post(ADMIN_PANEL_URL, data={
         "username": ADMIN_PANEL_USERNAME,
         "password": ADMIN_PANEL_PASSWORD,
         "admin_pin": ADMIN_PANEL_PIN,
         "remember": "1",
-    }, timeout=20)
+    }, timeout=30)
 
     if "Services" not in resp.text and "Admin Dashboard" not in resp.text:
         raise DashboardScrapeError("Hindi successful ang login sa admin panel.")
@@ -67,26 +69,38 @@ def _parse_rows(html: str) -> list[dict]:
     return results
 
 
-def scrape_services(max_pages: int = 30) -> list[dict]:
+def _fetch_page(session: requests.Session, url: str, retries: int = 3) -> str:
+    last_error = None
+    for attempt in range(1, retries + 1):
+        try:
+            resp = session.get(url, timeout=60)
+            if resp.status_code == 200:
+                return resp.text
+            last_error = f"HTTP {resp.status_code}"
+        except Exception as e:
+            last_error = str(e)
+        logger.warning(f"Retry {attempt}/{retries} for {url} — {last_error}")
+        time.sleep(2)
+    raise DashboardScrapeError(f"Failed to fetch {url} after {retries} tries: {last_error}")
+
+
+def scrape_services(max_pages: int = 40) -> list[dict]:
     """Returns list of {local_id, panel_id, name, provider, price} — LAHAT ng pages."""
     session = _login()
     all_results = []
     seen_local_ids = set()
 
     for page in range(1, max_pages + 1):
-        if page == 1:
-            url = ADMIN_PANEL_URL + "/services"
-        else:
-            url = ADMIN_PANEL_URL + f"/services/{page}"
+        url = ADMIN_PANEL_URL + "/services" if page == 1 else ADMIN_PANEL_URL + f"/services/{page}"
 
-        resp = session.get(url, timeout=30)
-        page_rows = _parse_rows(resp.text)
+        html = _fetch_page(session, url)
+        page_rows = _parse_rows(html)
+
+        logger.info(f"Page {page}: {len(page_rows)} rows found, total so far: {len(all_results)}")
 
         if not page_rows:
-            # Walang laman ang page na ito — tapos na tayo
             break
 
-        # Kung parehong laman ng nakaraang page (paulit-ulit), tigil na rin
         new_ids = {r["local_id"] for r in page_rows} - seen_local_ids
         if not new_ids:
             break
@@ -96,4 +110,7 @@ def scrape_services(max_pages: int = 30) -> list[dict]:
                 all_results.append(r)
                 seen_local_ids.add(r["local_id"])
 
+        time.sleep(0.7)  # konting delay para hindi ma-flag bilang bot
+
+    logger.info(f"Scraping done. Total services: {len(all_results)}")
     return all_results
