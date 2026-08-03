@@ -97,9 +97,11 @@ def scrape_services(max_pages: int = 30) -> list[dict]:
         page_rows = _parse_rows(html)
 
         new_ids = {r["local_id"] for r in page_rows} - seen_local_ids
+        first_id = page_rows[0]["local_id"] if page_rows else "N/A"
+        last_id = page_rows[-1]["local_id"] if page_rows else "N/A"
         logger.info(
-            f"Page {page}: {len(page_rows)} rows found, {len(new_ids)} new, "
-            f"total so far: {len(all_results)}"
+            f"Page {page}: {len(page_rows)} rows, {len(new_ids)} new, "
+            f"first_id={first_id} last_id={last_id}, total so far: {len(all_results)}"
         )
 
         if not page_rows:
@@ -108,7 +110,7 @@ def scrape_services(max_pages: int = 30) -> list[dict]:
 
         if not new_ids:
             logger.warning(f"Page {page} had no NEW ids (possibly stale/cached) — skipping but continuing.")
-            time.sleep(1.5)
+            time.sleep(3.5)
             continue
 
         for r in page_rows:
