@@ -5,25 +5,27 @@ from config import CURRENCY
 
 
 async def sync_dashboard(update, context):
-    """Admin command: /syncdash — kukunin ang fresh services list mula sa admin panel."""
+    """Admin command: /syncdash — nagpapaalala na lang, hindi na direktang nag-s-scrape
+    dito (dahil na-block ang Render IP ng site). Gamitin ang push_dashboard.py sa Termux."""
     if not is_admin(update.effective_user.id):
         return
 
-    await update.message.reply_text("🔄 Sinisync ang services galing sa admin panel... sandali lang.")
+    last_sync = db.dashboard_last_sync()
+    count = db.dashboard_services_count()
 
-    try:
-        rows = dashboard_scraper.scrape_services()
-    except dashboard_scraper.DashboardScrapeError as e:
-        await update.message.reply_text(f"⚠️ Sync failed: {e}")
-        return
-    except Exception as e:
-        await update.message.reply_text(f"⚠️ May error: {e}")
-        return
+    if last_sync:
+        import datetime
+        dt = datetime.datetime.fromtimestamp(last_sync).strftime("%B %d, %Y • %I:%M %p")
+        status = f"📊 Current data: {count} services (last synced: {dt})"
+    else:
+        status = "📊 No data synced yet."
 
-    db.sync_dashboard_services(rows)
     await update.message.reply_text(
-        f"✅ Na-sync ang {len(rows)} services mula sa dashboard.\n"
-        f"Gamitin na ang /finddash <panel_id> para maghanap."
+        f"{status}\n\n"
+        f"⚠️ Please run this from Termux instead:\n"
+        f"`python push_dashboard.py`\n\n"
+        f"(Direct sync from here doesn't work reliably due to hosting IP restrictions.)",
+        parse_mode="Markdown"
     )
 
 
