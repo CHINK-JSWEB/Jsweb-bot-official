@@ -1,4 +1,7 @@
 import logging
+import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from telegram.ext import (
     Application,
@@ -30,6 +33,22 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
+
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"JSWEB bot is running.")
+
+    def log_message(self, format, *args):
+        pass
+
+
+def run_health_server():
+    port = int(os.getenv("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
 
 
 def main():
@@ -67,6 +86,8 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_site_keyword), group=1)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_addfunds_keyword), group=2)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reco_keyword), group=3)
+    threading.Thread(target=run_health_server, daemon=True).start()
+
     logger.info("JSWEB bot starting...")
     app.run_polling()
 
