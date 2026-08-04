@@ -9,7 +9,8 @@ def private_menu_keyboard(is_admin_user=False):
     keyboard = [
         [InlineKeyboardButton("💰 Balance", callback_data="m:mybalance"),
          InlineKeyboardButton("📦 Orders", callback_data="m:myorders")],
-        [InlineKeyboardButton("💵 Total Spend", callback_data="m:totalspend")],
+        [InlineKeyboardButton("💵 Total Spend", callback_data="m:totalspend"),
+         InlineKeyboardButton("🧮 Price Calculator", callback_data="m:calc")],
     ]
     if is_admin_user:
         keyboard.append([InlineKeyboardButton("📌 Reco Parser (Admin)", callback_data="m:reco")])
@@ -91,7 +92,16 @@ async def menu_callback(update, context):
             reply_markup=back_button()
         )
         return
-
+      
+    if data == "m:calc":
+        from commands.calculator import calc_flow
+        calc_flow[user_id] = "awaiting_id"
+        await query.edit_message_text(
+            "🧮 Price Calculator\n\nPlease type the Local Service ID (e.g. 1506):",
+            reply_markup=back_button()
+        )
+        return
+    
     if data == "m:addfunds":
         from commands.keyword_reply import FUNDS_CAPTION
         await context.bot.send_message(chat_id=update.effective_chat.id, text=FUNDS_CAPTION)
@@ -154,6 +164,10 @@ async def menu_callback(update, context):
 
 
 async def handle_menu_text(update, context):
+    from commands.calculator import handle_calc_text
+    if await handle_calc_text(update, context):
+        return
+
     from commands.signin import handle_signin_text
     if await handle_signin_text(update, context):
         return

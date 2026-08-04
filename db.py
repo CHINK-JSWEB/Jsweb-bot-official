@@ -345,3 +345,9 @@ def get_user_account(telegram_id: int):
 def delete_user_account(telegram_id: int):
     with get_conn() as conn:
         conn.execute("DELETE FROM user_accounts WHERE telegram_id = ?", (str(telegram_id),))
+        
+def get_dashboard_service(local_id: str):
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM dashboard_services WHERE local_id = ?", (local_id,)
+        ).fetchone()
