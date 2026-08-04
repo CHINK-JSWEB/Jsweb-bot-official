@@ -25,7 +25,8 @@ def group_menu_keyboard():
          InlineKeyboardButton("📌 Reco", url=RECO_CHANNEL_LINK)],
         [InlineKeyboardButton("💵 Add Funds", callback_data="m:addfunds"),
          InlineKeyboardButton("🎧 Customer Service", url=CUSTOMER_SERVICE_LINK)],
-        [InlineKeyboardButton("📜 Rules/FAQ", url=RULES_LINK)],
+        [InlineKeyboardButton("📜 Rules/FAQ", url=RULES_LINK),
+         InlineKeyboardButton("🏆 Leaderboard", callback_data="m:leaderboard")],
     ])
 
 
@@ -64,6 +65,12 @@ async def menu_callback(update, context):
 
     if data == "m:signin":
         await query.answer(PRIVATE_ONLY_NOTICE, show_alert=True)
+        return
+
+    if data == "m:leaderboard":
+        await query.answer()
+        from commands.leaderboard import leaderboard_callback
+        await leaderboard_callback(update, context)
         return
 
     personal_prefixes = ("m:mybalance", "m:myorders", "m:totalspend")

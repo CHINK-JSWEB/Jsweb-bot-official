@@ -28,6 +28,7 @@ from commands.dashboard import sync_dashboard, find_dash, search_dash
 from commands.keyword_reply import handle_site_keyword, handle_addfunds_keyword, handle_reco_keyword
 from commands.signin import signin_start
 from commands.calculator import calc_start
+from commands.leaderboard import leaderboard_command
 from commands.reco import reco_start
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -118,6 +119,7 @@ def main():
     app.add_handler(CommandHandler("reco", reco_start))
     app.add_handler(CommandHandler("signin", signin_start))
     app.add_handler(CommandHandler("calc", calc_start))
+    app.add_handler(CommandHandler("leaderboard", leaderboard_command))
     app.add_handler(CallbackQueryHandler(deposit_callback, pattern=r"^dep_(approve|reject):"))
     
     # Menu buttons

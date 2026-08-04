@@ -351,3 +351,7 @@ def get_dashboard_service(local_id: str):
         return conn.execute(
             "SELECT * FROM dashboard_services WHERE local_id = ?", (local_id,)
         ).fetchone()
+        
+def get_all_user_accounts():
+    with get_conn() as conn:
+        return conn.execute("SELECT * FROM user_accounts").fetchall()
