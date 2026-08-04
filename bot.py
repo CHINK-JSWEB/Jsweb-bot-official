@@ -41,6 +41,10 @@ class HealthHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"JSWEB bot is running.")
 
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
     def do_POST(self):
         if self.path != "/import_dashboard":
             self.send_response(404)
