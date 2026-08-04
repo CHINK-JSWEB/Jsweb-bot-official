@@ -79,6 +79,13 @@ def init_db():
                 site_password TEXT,
                 linked_at   INTEGER
             );
+            CREATE TABLE IF NOT EXISTS tracked_orders (
+                telegram_id TEXT,
+                order_id    TEXT,
+                last_status TEXT,
+                updated_at  INTEGER,
+                PRIMARY KEY (telegram_id, order_id)
+            );
             """
         )
 
@@ -355,3 +362,22 @@ def get_dashboard_service(local_id: str):
 def get_all_user_accounts():
     with get_conn() as conn:
         return conn.execute("SELECT * FROM user_accounts").fetchall()
+        
+def get_tracked_status(telegram_id, order_id: str):
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT last_status FROM tracked_orders WHERE telegram_id = ? AND order_id = ?",
+            (str(telegram_id), order_id),
+        ).fetchone()
+        return row["last_status"] if row else None
+
+
+def set_tracked_status(telegram_id, order_id: str, status: str):
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO tracked_orders (telegram_id, order_id, last_status, updated_at) "
+            "VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(telegram_id, order_id) DO UPDATE SET "
+            "last_status=excluded.last_status, updated_at=excluded.updated_at",
+            (str(telegram_id), order_id, status, int(time.time())),
+        )

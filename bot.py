@@ -29,6 +29,7 @@ from commands.keyword_reply import handle_site_keyword, handle_addfunds_keyword,
 from commands.signin import signin_start
 from commands.calculator import calc_start
 from commands.leaderboard import leaderboard_command
+from order_monitor import check_all_orders
 from commands.reco import reco_start
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -129,6 +130,8 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_addfunds_keyword), group=2)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reco_keyword), group=3)
     threading.Thread(target=run_health_server, daemon=True).start()
+
+    app.job_queue.run_repeating(check_all_orders, interval=600, first=60)
 
     logger.info("JSWEB bot starting...")
     app.run_polling()
