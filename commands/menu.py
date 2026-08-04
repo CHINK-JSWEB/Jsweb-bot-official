@@ -130,10 +130,10 @@ async def menu_callback(update, context):
         if not orders:
             await query.edit_message_text("No orders found.", reply_markup=back_button())
             return
-        lines = ["📦 *Recent Orders*\n"]
+        lines = ["📦 Recent Orders\n"]
         for o in orders[:10]:
             lines.append(f"#{o['order_id']} — {o['service_name'][:40]}\n   ₱{o['charge']:,.2f} — {o['status']}")
-        await query.edit_message_text("\n".join(lines), reply_markup=back_button(), parse_mode="Markdown")
+        await query.edit_message_text("\n".join(lines), reply_markup=back_button())
         return
 
     if data == "m:totalspend":
