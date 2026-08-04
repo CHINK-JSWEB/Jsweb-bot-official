@@ -18,11 +18,13 @@ def private_menu_keyboard(is_admin_user=False):
 
 def group_menu_keyboard():
     from commands.keyword_reply import RECO_CHANNEL_LINK
+    from config import RULES_LINK
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔑 Sign-in", callback_data="m:signin"),
          InlineKeyboardButton("📌 Reco", url=RECO_CHANNEL_LINK)],
         [InlineKeyboardButton("💵 Add Funds", callback_data="m:addfunds"),
          InlineKeyboardButton("🎧 Customer Service", url=CUSTOMER_SERVICE_LINK)],
+        [InlineKeyboardButton("📜 Rules/FAQ", url=RULES_LINK)],
     ])
 
 
