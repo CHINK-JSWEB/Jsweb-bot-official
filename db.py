@@ -381,3 +381,11 @@ def set_tracked_status(telegram_id, order_id: str, status: str):
             "last_status=excluded.last_status, updated_at=excluded.updated_at",
             (str(telegram_id), order_id, status, int(time.time())),
         )
+        
+def has_tracked_orders(telegram_id) -> bool:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM tracked_orders WHERE telegram_id = ? LIMIT 1",
+            (str(telegram_id),),
+        ).fetchone()
+        return row is not None

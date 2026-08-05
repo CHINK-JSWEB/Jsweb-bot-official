@@ -25,15 +25,33 @@ async def check_all_orders(context):
             logger.warning(f"Order check failed for user {telegram_id}: {e}")
             continue
 
+        # Kung wala pang kahit isang naka-track na order sa account na 'to,
+        # ibig sabihin unang beses natin siya na-scan — i-store lahat bilang
+        # baseline nang tahimik (para hindi mabomba ng notifications yung mga
+        # dati nang order).
+        is_first_scan = not db.has_tracked_orders(telegram_id)
+
         for o in orders:
             order_id = o["order_id"]
             new_status = o["status"]
             old_status = db.get_tracked_status(telegram_id, order_id)
 
             if old_status is None:
-                # Unang beses natin nakikita 'to — i-store lang, walang notify
-                # (para hindi mabomba ng notifications yung mga lumang orders)
                 db.set_tracked_status(telegram_id, order_id, new_status)
+                if is_first_scan:
+                    continue  # tahimik lang, baseline import
+                # Bagong order na lumitaw pagkatapos ng unang scan — i-notify!
+                try:
+                    await context.bot.send_message(
+                        chat_id=int(telegram_id),
+                        text=(
+                            f"🔔 New Order Detected!\n\n"
+                            f"#{order_id} — {o['service_name'][:50]}\n"
+                            f"Status: {new_status}"
+                        ),
+                    )
+                except Exception as e:
+                    logger.warning(f"Couldn't notify user {telegram_id}: {e}")
                 continue
 
             if old_status != new_status:
