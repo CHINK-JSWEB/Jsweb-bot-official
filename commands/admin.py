@@ -11,6 +11,8 @@ def is_admin(user_id: int) -> bool:
 
 async def pending(update, context):
     if not is_admin(update.effective_user.id):
+        from commands.access import ADMIN_ONLY_NOTICE
+        await update.message.reply_text(ADMIN_ONLY_NOTICE)
         return
     rows = db.get_pending_deposits()
     if not rows:
@@ -23,18 +25,16 @@ async def pending(update, context):
 
 async def approve(update, context):
     if not is_admin(update.effective_user.id):
-        return
-    if not context.args:
-        await update.message.reply_text("Usage: /approve <deposit_id>")
+        from commands.access import ADMIN_ONLY_NOTICE
+        await update.message.reply_text(ADMIN_ONLY_NOTICE)
         return
     await _resolve_deposit(update, context, int(context.args[0]), "approved")
 
 
 async def reject(update, context):
     if not is_admin(update.effective_user.id):
-        return
-    if not context.args:
-        await update.message.reply_text("Usage: /reject <deposit_id> [reason]")
+        from commands.access import ADMIN_ONLY_NOTICE
+        await update.message.reply_text(ADMIN_ONLY_NOTICE)
         return
     await _resolve_deposit(update, context, int(context.args[0]), "rejected")
 
@@ -102,9 +102,8 @@ async def deposit_callback(update, context):
 
 async def broadcast(update, context):
     if not is_admin(update.effective_user.id):
-        return
-    if not context.args:
-        await update.message.reply_text("Usage: /broadcast <message>")
+        from commands.access import ADMIN_ONLY_NOTICE
+        await update.message.reply_text(ADMIN_ONLY_NOTICE)
         return
 
     message = " ".join(context.args)

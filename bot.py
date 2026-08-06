@@ -30,6 +30,7 @@ from commands.signin import signin_start
 from commands.calculator import calc_start
 from commands.leaderboard import leaderboard_command
 from order_monitor import check_all_orders
+from commands.help import help_command
 from commands.reco import reco_start
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -98,6 +99,7 @@ def main():
 
     # User commands (typing still works kung gusto)
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("balance", balance))
     app.add_handler(CommandHandler("services", services))
     app.add_handler(CommandHandler("order", order))

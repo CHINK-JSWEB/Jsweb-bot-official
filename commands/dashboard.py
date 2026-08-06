@@ -8,6 +8,8 @@ async def sync_dashboard(update, context):
     """Admin command: /syncdash — nagpapaalala na lang, hindi na direktang nag-s-scrape
     dito (dahil na-block ang Render IP ng site). Gamitin ang push_dashboard.py sa Termux."""
     if not is_admin(update.effective_user.id):
+        from commands.access import ADMIN_ONLY_NOTICE
+        await update.message.reply_text(ADMIN_ONLY_NOTICE)
         return
 
     last_sync = db.dashboard_last_sync()

@@ -5,6 +5,8 @@ from commands.admin import is_admin
 async def map_id(update, context):
     """Admin command: /map <panel_id_or_range> <local_id_or_range> [name...]"""
     if not is_admin(update.effective_user.id):
+        from commands.access import ADMIN_ONLY_NOTICE
+        await update.message.reply_text(ADMIN_ONLY_NOTICE)
         return
 
     if len(context.args) < 2:
@@ -75,6 +77,8 @@ async def find_id(update, context):
 async def list_map(update, context):
     """Admin command: /maplist — shows all saved mappings."""
     if not is_admin(update.effective_user.id):
+        from commands.access import ADMIN_ONLY_NOTICE
+        await update.message.reply_text(ADMIN_ONLY_NOTICE)
         return
     rows = db.list_mappings()
     if not rows:
