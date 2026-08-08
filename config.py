@@ -33,4 +33,4 @@ IMPORT_SECRET = os.getenv("JSWEB_IMPORT_SECRET", "")
 # ── Rules/FAQ (Group button) ─────────────────────────────
 RULES_LINK = "https://t.me/+mICjKrlW9fliNTNl"
 # ── OCR (GCash receipt verification) ─────────────────────
-OCR_API_KEY = os.getenv("K87640414288957", "")
+OCR_API_KEY = os.getenv("JSWEB_OCR_API_KEY", "")
