@@ -26,9 +26,11 @@ async def handle_gcash_screenshot(update, context):
 
     # Hindi nabasa ng OCR — ipasa sa admin
     if not result.ocr_success:
+        debug_text = str(result.debug_info)[:500]
         await processing_msg.edit_text(
             "⚠️ I couldn't clearly read the amount/reference number from this "
-            "screenshot. Forwarding to admin for manual review."
+            "screenshot. Forwarding to admin for manual review.\n\n"
+            f"🐛 Debug: {debug_text}"
         )
         await _notify_admin_manual(context, user_id, account["site_username"], result, image_bytes)
         return

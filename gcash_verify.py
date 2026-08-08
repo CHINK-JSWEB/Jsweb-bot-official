@@ -19,6 +19,10 @@ class VerifyResult:
         self.tamper_suspected = False
         self.tamper_reason = ""
         self.ocr_success = False
+        self.debug_info = {}
+
+
+LAST_OCR_DEBUG = {}
 
 
 def _ocr_image(image_bytes: bytes) -> str:
@@ -28,12 +32,23 @@ def _ocr_image(image_bytes: bytes) -> str:
         data={"apikey": OCR_API_KEY, "language": "eng", "OCREngine": 2},
         timeout=30,
     )
-    data = resp.json()
-    if data.get("IsErroredOnProcessing"):
+    try:
+        data = resp.json()
+    except Exception:
+        LAST_OCR_DEBUG["error"] = f"Non-JSON response: {resp.text[:300]}"
         return ""
+
+    LAST_OCR_DEBUG["raw"] = data
+
+    if data.get("IsErroredOnProcessing"):
+        LAST_OCR_DEBUG["error"] = data.get("ErrorMessage") or data.get("ErrorDetails") or "Unknown OCR error"
+        return ""
+
     results = data.get("ParsedResults") or []
     if not results:
+        LAST_OCR_DEBUG["error"] = "No ParsedResults in response"
         return ""
+
     return results[0].get("ParsedText", "")
 
 
@@ -91,8 +106,10 @@ def _check_tamper(image_bytes: bytes) -> tuple[bool, str]:
 def verify_receipt(image_bytes: bytes) -> VerifyResult:
     result = VerifyResult()
 
+    LAST_OCR_DEBUG.clear()
     text = _ocr_image(image_bytes)
     result.raw_text = text
+    result.debug_info = dict(LAST_OCR_DEBUG)
 
     if not text:
         return result
