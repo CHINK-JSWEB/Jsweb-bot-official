@@ -20,7 +20,6 @@ from commands.services import services
 from commands.order import order
 from commands.status import status
 from commands.history import history
-from commands.autoverify import addfunds_start, handle_addfunds_video
 from commands.admin import pending, approve, reject, broadcast, deposit_callback
 from commands.menu import menu_callback, handle_menu_text
 from commands.mapping import map_id, find_id, list_map
@@ -29,6 +28,7 @@ from commands.keyword_reply import handle_site_keyword, handle_addfunds_keyword,
 from commands.signin import signin_start
 from commands.calculator import calc_start
 from commands.leaderboard import leaderboard_command
+from commands.addfunds_admin import addfunds_command
 from order_monitor import check_all_orders
 from commands.help import help_command
 from commands.reco import reco_start
@@ -98,7 +98,7 @@ def main():
     db.init_db()
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # User commands (typing still works kung gusto)
+    # User commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("balance", balance))
@@ -106,8 +106,9 @@ def main():
     app.add_handler(CommandHandler("order", order))
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("history", history))
-    app.add_handler(CommandHandler("addfunds", addfunds_start))
-    app.add_handler(MessageHandler(filters.VIDEO | filters.VIDEO_NOTE, handle_addfunds_video))
+    app.add_handler(CommandHandler("signin", signin_start))
+    app.add_handler(CommandHandler("calc", calc_start))
+    app.add_handler(CommandHandler("leaderboard", leaderboard_command))
 
     # Admin commands
     app.add_handler(CommandHandler("pending", pending))
@@ -121,9 +122,7 @@ def main():
     app.add_handler(CommandHandler("finddash", find_dash))
     app.add_handler(CommandHandler("searchdash", search_dash))
     app.add_handler(CommandHandler("reco", reco_start))
-    app.add_handler(CommandHandler("signin", signin_start))
-    app.add_handler(CommandHandler("calc", calc_start))
-    app.add_handler(CommandHandler("leaderboard", leaderboard_command))
+    app.add_handler(CommandHandler("addfunds", addfunds_command))
     app.add_handler(CallbackQueryHandler(deposit_callback, pattern=r"^dep_(approve|reject):"))
 
     # Menu buttons
