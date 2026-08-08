@@ -142,3 +142,23 @@ def add_balance(username: str, amount: float, note: str = "Auto-verified deposit
         return resp.json()
     except Exception:
         return {"raw": resp.text[:500]}
+def get_latest_balance(username: str):
+    """Kinukuha ang pinaka-bagong 'User Balance' mula sa Payments table
+    para sa isang partikular na username (pinaka-una sa listahan = pinaka-bago)."""
+    session = _login()
+    resp = session.get("https://jsweboosting.site/admin/payments", timeout=30)
+    soup = BeautifulSoup(resp.text, "lxml")
+
+    rows = soup.find_all("tr")[1:]  # skip header
+    for row in rows:
+        cells = row.find_all("td")
+        if len(cells) < 4:
+            continue
+        user_cell_text = cells[1].get_text(strip=True)
+        if username.lower() in user_cell_text.lower():
+            balance_text = cells[3].get_text(strip=True)
+            try:
+                return float(balance_text.replace(",", ""))
+            except ValueError:
+                return None
+    return None
