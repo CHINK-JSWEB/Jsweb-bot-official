@@ -1,12 +1,11 @@
 import db
 import dashboard_scraper
-from config import CURRENCY
-from commands.admin import is_admin
+from config import CURRENCY, ADDFUNDS_OWNER_IDS
 from commands.access import ADMIN_ONLY_NOTICE
 
 
 async def addfunds_command(update, context):
-    if not is_admin(update.effective_user.id):
+    if update.effective_user.id not in ADDFUNDS_OWNER_IDS:
         await update.message.reply_text(ADMIN_ONLY_NOTICE)
         return
 

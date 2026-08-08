@@ -36,3 +36,5 @@ RULES_LINK = "https://t.me/+mICjKrlW9fliNTNl"
 OCR_API_KEY = os.getenv("JSWEB_OCR_API_KEY", "")
 # ── Auto-verify Safety Cap ────────────────────────────────
 AUTO_APPROVE_MAX_AMOUNT = float(os.getenv("JSWEB_AUTO_APPROVE_MAX", "1000"))
+# ── Add Funds — eksklusibong Owner IDs lang ─────────────
+ADDFUNDS_OWNER_IDS = [8488933928, 7540290780]
