@@ -122,3 +122,23 @@ def scrape_services(max_pages: int = 30) -> list[dict]:
 
     logger.info(f"Scraping done. Total services: {len(all_results)}")
     return all_results
+    
+def add_balance(username: str, amount: float, note: str = "Auto-verified deposit") -> dict:
+    """Nagdadagdag ng balance sa isang totoong user account sa site, gamit
+    ang parehong admin login. Ginagamit ito ng auto-verify deposit feature."""
+    session = _login()
+    resp = session.post(
+        "https://jsweboosting.site/admin/payments/new-online",
+        data={
+            "username": username,
+            "amount": str(amount),
+            "add-remove": "add",
+            "method": "1",
+            "note": note,
+        },
+        timeout=30,
+    )
+    try:
+        return resp.json()
+    except Exception:
+        return {"raw": resp.text[:500]}

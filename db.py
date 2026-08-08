@@ -86,6 +86,12 @@ def init_db():
                 updated_at  INTEGER,
                 PRIMARY KEY (telegram_id, order_id)
             );
+            CREATE TABLE IF NOT EXISTS used_gcash_refs (
+                ref_no      TEXT PRIMARY KEY,
+                telegram_id TEXT,
+                amount      REAL,
+                used_at     INTEGER
+            );
             """
         )
 
@@ -389,3 +395,15 @@ def has_tracked_orders(telegram_id) -> bool:
             (str(telegram_id),),
         ).fetchone()
         return row is not None
+def is_ref_used(ref_no: str) -> bool:
+    with get_conn() as conn:
+        row = conn.execute("SELECT 1 FROM used_gcash_refs WHERE ref_no = ?", (ref_no,)).fetchone()
+        return row is not None
+
+
+def mark_ref_used(ref_no: str, telegram_id, amount: float):
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO used_gcash_refs (ref_no, telegram_id, amount, used_at) VALUES (?, ?, ?, ?)",
+            (ref_no, str(telegram_id), amount, int(time.time())),
+        )

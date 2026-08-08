@@ -30,6 +30,7 @@ from commands.signin import signin_start
 from commands.calculator import calc_start
 from commands.leaderboard import leaderboard_command
 from order_monitor import check_all_orders
+from commands.autoverify import handle_gcash_screenshot
 from commands.help import help_command
 from commands.reco import reco_start
 logging.basicConfig(
@@ -106,7 +107,7 @@ def main():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("history", history))
     app.add_handler(CommandHandler("deposit", deposit))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_gcash_screenshot))
 
     # Admin commands
     app.add_handler(CommandHandler("pending", pending))
