@@ -26,10 +26,15 @@ LAST_OCR_DEBUG = {}
 
 
 def _ocr_image(image_bytes: bytes) -> str:
+    if not OCR_API_KEY:
+        LAST_OCR_DEBUG["error"] = "OCR_API_KEY is empty in this environment!"
+        return ""
+
     resp = requests.post(
         "https://api.ocr.space/parse/image",
         files={"file": ("receipt.jpg", image_bytes)},
-        data={"apikey": OCR_API_KEY, "language": "eng", "OCREngine": 2},
+        data={"language": "eng", "OCREngine": 2},
+        headers={"apikey": OCR_API_KEY},
         timeout=30,
     )
     try:
