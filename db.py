@@ -86,6 +86,12 @@ def init_db():
                 updated_at  INTEGER,
                 PRIMARY KEY (telegram_id, order_id)
             );
+            CREATE TABLE IF NOT EXISTS used_video_hashes (
+                video_hash  TEXT PRIMARY KEY,
+                telegram_id TEXT,
+                amount      REAL,
+                used_at     INTEGER
+            );
             CREATE TABLE IF NOT EXISTS used_gcash_refs (
                 ref_no      TEXT PRIMARY KEY,
                 telegram_id TEXT,
@@ -406,4 +412,17 @@ def mark_ref_used(ref_no: str, telegram_id, amount: float):
         conn.execute(
             "INSERT OR IGNORE INTO used_gcash_refs (ref_no, telegram_id, amount, used_at) VALUES (?, ?, ?, ?)",
             (ref_no, str(telegram_id), amount, int(time.time())),
+        )
+        
+def is_video_used(video_hash: str) -> bool:
+    with get_conn() as conn:
+        row = conn.execute("SELECT 1 FROM used_video_hashes WHERE video_hash = ?", (video_hash,)).fetchone()
+        return row is not None
+
+
+def mark_video_used(video_hash: str, telegram_id, amount: float):
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO used_video_hashes (video_hash, telegram_id, amount, used_at) VALUES (?, ?, ?, ?)",
+            (video_hash, str(telegram_id), amount, int(time.time())),
         )

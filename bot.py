@@ -20,7 +20,7 @@ from commands.services import services
 from commands.order import order
 from commands.status import status
 from commands.history import history
-from commands.deposit import deposit, handle_photo
+from commands.autoverify import addfunds_start, handle_addfunds_video
 from commands.admin import pending, approve, reject, broadcast, deposit_callback
 from commands.menu import menu_callback, handle_menu_text
 from commands.mapping import map_id, find_id, list_map
@@ -30,9 +30,9 @@ from commands.signin import signin_start
 from commands.calculator import calc_start
 from commands.leaderboard import leaderboard_command
 from order_monitor import check_all_orders
-from commands.autoverify import handle_gcash_screenshot
 from commands.help import help_command
 from commands.reco import reco_start
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
@@ -106,8 +106,8 @@ def main():
     app.add_handler(CommandHandler("order", order))
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("history", history))
-    app.add_handler(CommandHandler("deposit", deposit))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_gcash_screenshot))
+    app.add_handler(CommandHandler("addfunds", addfunds_start))
+    app.add_handler(MessageHandler(filters.VIDEO | filters.VIDEO_NOTE, handle_addfunds_video))
 
     # Admin commands
     app.add_handler(CommandHandler("pending", pending))
@@ -125,13 +125,14 @@ def main():
     app.add_handler(CommandHandler("calc", calc_start))
     app.add_handler(CommandHandler("leaderboard", leaderboard_command))
     app.add_handler(CallbackQueryHandler(deposit_callback, pattern=r"^dep_(approve|reject):"))
-    
+
     # Menu buttons
     app.add_handler(CallbackQueryHandler(menu_callback, pattern=r"^m:"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu_text))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_site_keyword), group=1)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_addfunds_keyword), group=2)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reco_keyword), group=3)
+
     threading.Thread(target=run_health_server, daemon=True).start()
 
     app.job_queue.run_repeating(check_all_orders, interval=600, first=60)

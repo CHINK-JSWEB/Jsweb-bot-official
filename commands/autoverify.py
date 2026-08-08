@@ -1,90 +1,101 @@
+import hashlib
 import db
-import gcash_verify
 import dashboard_scraper
-from config import CURRENCY, ADMIN_IDS
+from config import CURRENCY
+from commands.access import is_private, PRIVATE_ONLY_NOTICE
+
+addfunds_flow = {}  # user_id -> "awaiting_amount" o {"step": "video", "amount": ...}
 
 
-async def handle_gcash_screenshot(update, context):
-    """Kapag may na-DM na screenshot sa bot, susubukan itong i-verify at
-    i-auto-credit kung malinis lahat ng checks."""
+async def addfunds_start(update, context):
+    if not is_private(update):
+        await update.message.reply_text(PRIVATE_ONLY_NOTICE)
+        return
+
     user_id = update.effective_user.id
+    account = db.get_user_account(user_id)
+    if not account:
+        await update.message.reply_text("🔒 Please /signin first so I know which account to credit.")
+        return
+
+    addfunds_flow[user_id] = "awaiting_amount"
+    await update.message.reply_text(
+        "💵 Auto Add Funds\n\nHow much did you send? Type the amount (numbers only):"
+    )
+
+
+async def handle_addfunds_text(update, context) -> bool:
+    user_id = update.effective_user.id
+    if user_id not in addfunds_flow:
+        return False
+
+    state = addfunds_flow[user_id]
+    text = update.message.text.strip()
+
+    if state == "awaiting_amount":
+        try:
+            amount = float(text)
+            if amount <= 0:
+                raise ValueError
+        except ValueError:
+            await update.message.reply_text("Please type a valid number, e.g. 350")
+            return True
+
+        addfunds_flow[user_id] = {"step": "video", "amount": amount}
+        await update.message.reply_text(
+            f"Got it — {CURRENCY}{amount:,.2f}.\n\n"
+            f"📹 Now please send a screen recording of the GCash transaction "
+            f"(video, not a photo)."
+        )
+        return True
+
+    return True  # nasa "video" step na, hinihintay yung video mismo
+
+
+async def handle_addfunds_video(update, context):
+    user_id = update.effective_user.id
+    state = addfunds_flow.get(user_id)
+
+    if not isinstance(state, dict) or state.get("step") != "video":
+        return  # walang naka-hintay na amount, ignore
 
     account = db.get_user_account(user_id)
     if not account:
-        await update.message.reply_text(
-            "🔒 Please /signin first so I know which account to credit."
-        )
+        await update.message.reply_text("🔒 Please /signin first.")
+        addfunds_flow.pop(user_id, None)
         return
 
-    processing_msg = await update.message.reply_text("🔍 Verifying your receipt, please wait...")
+    amount = state["amount"]
+    addfunds_flow.pop(user_id, None)
 
-    photo = update.message.photo[-1]
-    file = await context.bot.get_file(photo.file_id)
-    image_bytes = await file.download_as_bytearray()
+    processing_msg = await update.message.reply_text("🔄 Processing your video, please wait...")
 
-    result = gcash_verify.verify_receipt(bytes(image_bytes))
+    video = update.message.video or update.message.video_note
+    file = await context.bot.get_file(video.file_id)
+    video_bytes = await file.download_as_bytearray()
 
-    # Hindi nabasa ng OCR — ipasa sa admin
-    if not result.ocr_success:
-        debug_text = str(result.debug_info)[:500]
+    video_hash = hashlib.sha256(bytes(video_bytes)).hexdigest()
+
+    if db.is_video_used(video_hash):
         await processing_msg.edit_text(
-            "⚠️ I couldn't clearly read the amount/reference number from this "
-            "screenshot. Forwarding to admin for manual review.\n\n"
-            f"🐛 Debug: {debug_text}"
-        )
-        await _notify_admin_manual(context, user_id, account["site_username"], result, image_bytes)
-        return
-
-    # Duplicate reference number — tanggihan agad
-    if db.is_ref_used(result.ref_no):
-        await processing_msg.edit_text(
-            "❌ This receipt's reference number has already been used before. "
+            "❌ This video has already been used before. "
             "If you believe this is a mistake, please contact Customer Service."
         )
         return
 
-    # May palatandaan ng pag-edit — ipasa sa admin
-    if result.tamper_suspected:
-        await processing_msg.edit_text(
-            "⚠️ This screenshot needs manual verification. "
-            "Forwarding to admin for review."
-        )
-        await _notify_admin_manual(context, user_id, account["site_username"], result, image_bytes)
-        return
-
-    # Malinis lahat — auto-credit!
     try:
         dashboard_scraper.add_balance(
-            account["site_username"], result.amount,
-            note=f"Auto-verified GCash deposit (Ref: {result.ref_no})"
+            account["site_username"], amount,
+            note="Auto-verified deposit (video)"
         )
     except Exception as e:
-        await processing_msg.edit_text(
-            f"⚠️ Verification passed, but crediting failed: {e}\nForwarding to admin."
-        )
-        await _notify_admin_manual(context, user_id, account["site_username"], result, image_bytes)
+        await processing_msg.edit_text(f"⚠️ Crediting failed: {e}\nPlease contact Customer Service.")
         return
 
-    db.mark_ref_used(result.ref_no, user_id, result.amount)
+    db.mark_video_used(video_hash, user_id, amount)
 
     await processing_msg.edit_text(
         f"✅ Verified & Credited!\n\n"
-        f"💰 Amount: {CURRENCY}{result.amount:,.2f}\n"
-        f"🧾 Ref No: {result.ref_no}\n\n"
+        f"💰 Amount: {CURRENCY}{amount:,.2f}\n\n"
         f"Your balance has been updated automatically."
     )
-
-
-async def _notify_admin_manual(context, user_id, site_username, result, image_bytes):
-    caption = (
-        f"⚠️ Manual review needed\n"
-        f"User: {site_username} (Telegram ID: {user_id})\n"
-        f"Detected amount: {result.amount}\n"
-        f"Detected ref: {result.ref_no}\n"
-        f"Tamper flag: {result.tamper_suspected} {result.tamper_reason}"
-    )
-    for admin_id in ADMIN_IDS:
-        try:
-            await context.bot.send_photo(chat_id=admin_id, photo=bytes(image_bytes), caption=caption)
-        except Exception:
-            pass

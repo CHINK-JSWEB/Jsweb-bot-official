@@ -111,7 +111,8 @@ async def menu_callback(update, context):
     
     if data == "m:addfunds":
         from commands.keyword_reply import FUNDS_CAPTION
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=FUNDS_CAPTION)
+        text = FUNDS_CAPTION + "\n\n💡 Tip: DM me and type /addfunds for automatic verification!"
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=text)
         return
 
     if data == "m:mybalance":
@@ -171,6 +172,10 @@ async def menu_callback(update, context):
 
 
 async def handle_menu_text(update, context):
+    from commands.autoverify import handle_addfunds_text
+    if await handle_addfunds_text(update, context):
+        return
+
     from commands.calculator import handle_calc_text
     if await handle_calc_text(update, context):
         return

@@ -34,3 +34,5 @@ IMPORT_SECRET = os.getenv("JSWEB_IMPORT_SECRET", "")
 RULES_LINK = "https://t.me/+mICjKrlW9fliNTNl"
 # ── OCR (GCash receipt verification) ─────────────────────
 OCR_API_KEY = os.getenv("JSWEB_OCR_API_KEY", "")
+# ── Auto-verify Safety Cap ────────────────────────────────
+AUTO_APPROVE_MAX_AMOUNT = float(os.getenv("JSWEB_AUTO_APPROVE_MAX", "1000"))
