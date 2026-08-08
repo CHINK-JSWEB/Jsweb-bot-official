@@ -7,7 +7,12 @@ from config import RECO_CHANNEL_ID
 
 reco_flow = set()  # user_ids na naghihintay mag-paste ng listahan
 
-PLATFORM_KEYWORDS = ["facebook", "tiktok", "instagram", "telegram"]
+PLATFORM_ALIASES = {
+    "facebook": "Facebook", "fb": "Facebook",
+    "instagram": "Instagram", "ig": "Instagram",
+    "tiktok": "Tiktok", "tt": "Tiktok",
+    "telegram": "Telegram", "tg": "Telegram",
+}
 SUBCAT_KEYWORDS = ["followers", "views", "react", "shares", "share", "comments", "comment",
                     "group members", "members", "saves", "save", "likes", "like"]
 SKIP_LINE_MARKERS = [
@@ -74,10 +79,13 @@ def _strip_symbols(text: str) -> str:
 def _looks_like_platform_header(line: str):
     if any(ch.isdigit() for ch in line):
         return None
-    clean = line.lower()
-    for kw in PLATFORM_KEYWORDS:
-        if kw in clean:
-            return kw.capitalize()
+    clean = re.sub(r'[^\w\s]', ' ', line.lower()).strip()
+    words = clean.split()
+    if len(words) > 3:
+        return None  # malamang hindi header kung mahaba masyado ang linya
+    for word in words:
+        if word in PLATFORM_ALIASES:
+            return PLATFORM_ALIASES[word]
     return None
 
 
@@ -258,12 +266,26 @@ async def handle_reco_text(update, context) -> bool:
     for i in range(0, len(result), 3800):
         await update.message.reply_text(result[i:i + 3800])
 
+    # I-bura muna ang mga lumang reco messages sa Channel (kung meron)
+    old_ids_raw = db.get_meta("last_reco_channel_messages")
+    if old_ids_raw:
+        for old_id in old_ids_raw.split(","):
+            try:
+                await context.bot.delete_message(chat_id=RECO_CHANNEL_ID, message_id=int(old_id))
+            except Exception:
+                pass  # baka nabura na dati, o wala nang access — okay lang, tuloy pa rin
+
+    new_ids = []
     try:
         for i in range(0, len(result), 3800):
-            await context.bot.send_message(
+            sent = await context.bot.send_message(
                 chat_id=RECO_CHANNEL_ID, text=result[i:i + 3800]
             )
+            new_ids.append(str(sent.message_id))
     except Exception as e:
         await update.message.reply_text(f"⚠️ Couldn't post to channel: {e}")
+        return True
+
+    db.set_meta("last_reco_channel_messages", ",".join(new_ids))
 
     return True

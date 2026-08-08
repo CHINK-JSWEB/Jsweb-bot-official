@@ -73,6 +73,10 @@ def init_db():
                 price       REAL,
                 updated_at  INTEGER
             );
+            CREATE TABLE IF NOT EXISTS bot_meta (
+                key         TEXT PRIMARY KEY,
+                value       TEXT
+            );
             CREATE TABLE IF NOT EXISTS user_accounts (
                 telegram_id TEXT PRIMARY KEY,
                 site_username TEXT,
@@ -426,3 +430,16 @@ def mark_video_used(video_hash: str, telegram_id, amount: float):
             "INSERT OR IGNORE INTO used_video_hashes (video_hash, telegram_id, amount, used_at) VALUES (?, ?, ?, ?)",
             (video_hash, str(telegram_id), amount, int(time.time())),
         )
+def set_meta(key: str, value: str):
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO bot_meta (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, value),
+        )
+
+
+def get_meta(key: str):
+    with get_conn() as conn:
+        row = conn.execute("SELECT value FROM bot_meta WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row else None
