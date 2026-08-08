@@ -32,10 +32,10 @@ def login(username: str, password: str) -> requests.Session:
 def get_balance(session: requests.Session) -> float:
     resp = session.get(USER_SITE_URL + "/", timeout=20)
     soup = BeautifulSoup(resp.text, "lxml")
-    bal_div = soup.find("div", class_="balance")
-    if not bal_div:
+    bal_el = soup.find(class_="balance")
+    if not bal_el:
         return 0.0
-    match = re.search(r"[\d,]+\.?\d*", bal_div.get_text())
+    match = re.search(r"[\d,]+\.?\d*", bal_el.get_text())
     return float(match.group().replace(",", "")) if match else 0.0
 
 
