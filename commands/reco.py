@@ -5,7 +5,7 @@ import db
 from commands.admin import is_admin
 from config import RECO_CHANNEL_ID
 
-reco_flow = set()  # user_ids na naghihintay mag-paste ng listahan
+reco_flow = set()
 
 PLATFORM_ALIASES = {
     "facebook": "Facebook", "fb": "Facebook",
@@ -13,6 +13,7 @@ PLATFORM_ALIASES = {
     "tiktok": "Tiktok", "tt": "Tiktok",
     "telegram": "Telegram", "tg": "Telegram",
 }
+
 SUBCAT_KEYWORDS = ["followers", "views", "react", "shares", "share", "comments", "comment",
                     "group members", "members", "saves", "save", "likes", "like"]
 SKIP_LINE_MARKERS = [
@@ -23,18 +24,11 @@ SKIP_LINE_MARKERS = [
 PLATFORM_EMOJI = {"Facebook": "🔷", "Tiktok": "🎬", "Instagram": "🌈", "Telegram": "🚀"}
 
 SUBCAT_EMOJI = [
-    ("follower", "⭐"),
-    ("view", "👁"),
-    ("react", "❤️"),
-    ("share", "🔄"),
-    ("comment", "💬"),
-    ("group member", "👥"),
-    ("member", "👥"),
-    ("save", "💾"),
-    ("like", "🔥"),
+    ("follower", "⭐"), ("view", "👁"), ("react", "❤️"), ("share", "🔄"),
+    ("comment", "💬"), ("group member", "👥"), ("member", "👥"),
+    ("save", "💾"), ("like", "🔥"),
 ]
 
-# ── Font styles ──────────────────────────────────────────────
 _BOLD_SANS = {}
 for _i in range(26):
     _BOLD_SANS[chr(ord('A') + _i)] = chr(0x1D5D4 + _i)
@@ -49,13 +43,10 @@ for _i in range(26):
 
 
 def bold_sans(text: str) -> str:
-    """Bold Sans-Serif — para sa platform names (FACEBOOK, TIKTOK, atbp)."""
     return "".join(_BOLD_SANS.get(ch, ch) for ch in text)
 
 
 def italic_bold(text: str) -> str:
-    """Bold Italic — para sa sub-labels (Followers, Views, atbp), iba ang porma
-    kaysa sa platform names para may contrast."""
     return "".join(_ITALIC_BOLD.get(ch, ch) for ch in text)
 
 
@@ -82,7 +73,7 @@ def _looks_like_platform_header(line: str):
     clean = re.sub(r'[^\w\s]', ' ', line.lower()).strip()
     words = clean.split()
     if len(words) > 3:
-        return None  # malamang hindi header kung mahaba masyado ang linya
+        return None
     for word in words:
         if word in PLATFORM_ALIASES:
             return PLATFORM_ALIASES[word]
@@ -114,13 +105,32 @@ def _extract_ids(line: str):
     return tokens, note
 
 
-def _collapse_ids(ids: list[str]) -> str:
+def _resolve_tokens(tokens):
+    """Nagbabalik ng list ng (local_id, price) tuples, at listahan ng missing panel IDs."""
+    resolved = []
+    missing = []
+    for t in tokens:
+        ids_to_check = [str(t[1])] if t[0] == "single" else [str(p) for p in range(t[1], t[2] + 1)]
+        for panel_id in ids_to_check:
+            row = db.find_dashboard_by_panel_id(panel_id)
+            if row:
+                resolved.append((row["local_id"], row["price"]))
+            else:
+                missing.append(panel_id)
+    return resolved, missing
+
+
+def _collapse_with_price(pairs):
+    """pairs: list ng (local_id_str, price). Ginagawang 'range [presyo]' na display."""
+    ids = [p[0] for p in pairs]
+    prices = [p[1] for p in pairs]
     nums = []
     for i in ids:
         try:
             nums.append(int(i))
         except ValueError:
             nums.append(None)
+
     parts = []
     i = 0
     while i < len(nums):
@@ -131,31 +141,18 @@ def _collapse_ids(ids: list[str]) -> str:
         j = i
         while j + 1 < len(nums) and nums[j + 1] is not None and nums[j + 1] == nums[j] + 1:
             j += 1
-        parts.append(f"{nums[i]}–{nums[j]}" if j > i else str(nums[i]))
-        i = j + 1
-    return " • ".join(parts)
 
-
-def _resolve_tokens(tokens):
-    resolved = []
-    missing = []
-    for t in tokens:
-        if t[0] == "single":
-            panel_id = str(t[1])
-            row = db.find_dashboard_by_panel_id(panel_id)
-            if row:
-                resolved.append(row["local_id"])
-            else:
-                missing.append(panel_id)
+        id_str = f"{nums[i]}–{nums[j]}" if j > i else str(nums[i])
+        price_group = [p for p in prices[i:j + 1] if p]
+        if price_group:
+            pmin, pmax = min(price_group), max(price_group)
+            price_str = f" [₱{pmin:,.2f}]" if pmin == pmax else f" [₱{pmin:,.2f}–₱{pmax:,.2f}]"
         else:
-            _, s, e = t
-            for pid in range(s, e + 1):
-                row = db.find_dashboard_by_panel_id(str(pid))
-                if row:
-                    resolved.append(row["local_id"])
-                else:
-                    missing.append(str(pid))
-    return resolved, missing
+            price_str = ""
+        parts.append(f"{id_str}{price_str}")
+        i = j + 1
+
+    return " • ".join(parts)
 
 
 def parse_and_resolve(text: str) -> str:
@@ -196,7 +193,7 @@ def parse_and_resolve(text: str) -> str:
         all_missing.extend(missing)
 
         if resolved:
-            display = _collapse_ids(resolved)
+            display = _collapse_with_price(resolved)
             if note:
                 display += f" ({note})"
             categories[current_cat].append((current_sub or "", display))
@@ -266,26 +263,22 @@ async def handle_reco_text(update, context) -> bool:
     for i in range(0, len(result), 3800):
         await update.message.reply_text(result[i:i + 3800])
 
-    # I-bura muna ang mga lumang reco messages sa Channel (kung meron)
     old_ids_raw = db.get_meta("last_reco_channel_messages")
     if old_ids_raw:
         for old_id in old_ids_raw.split(","):
             try:
                 await context.bot.delete_message(chat_id=RECO_CHANNEL_ID, message_id=int(old_id))
             except Exception:
-                pass  # baka nabura na dati, o wala nang access — okay lang, tuloy pa rin
+                pass
 
     new_ids = []
     try:
         for i in range(0, len(result), 3800):
-            sent = await context.bot.send_message(
-                chat_id=RECO_CHANNEL_ID, text=result[i:i + 3800]
-            )
+            sent = await context.bot.send_message(chat_id=RECO_CHANNEL_ID, text=result[i:i + 3800])
             new_ids.append(str(sent.message_id))
     except Exception as e:
         await update.message.reply_text(f"⚠️ Couldn't post to channel: {e}")
         return True
 
     db.set_meta("last_reco_channel_messages", ",".join(new_ids))
-
     return True
