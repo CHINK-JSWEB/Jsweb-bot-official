@@ -19,7 +19,9 @@ async def check_all_orders(context):
     for acc in accounts:
         telegram_id = acc["telegram_id"]
         try:
-            session = user_site.login(acc["site_username"], acc["site_password"])
+            session = user_site.get_authenticated_session(
+                telegram_id, acc["site_username"], acc["site_password"]
+            )
             orders = user_site.get_orders(session, limit=20)
         except Exception as e:
             logger.warning(f"Order check failed for user {telegram_id}: {e}")

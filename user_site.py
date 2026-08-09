@@ -4,6 +4,7 @@ Login at pagkuha ng balance/orders ng regular users/boosters sa jsweboosting.sit
 """
 
 import re
+import time
 import requests
 from bs4 import BeautifulSoup
 
@@ -12,6 +13,13 @@ from config import USER_SITE_URL
 
 class UserLoginError(Exception):
     pass
+
+
+# In-memory session cache — para hindi na kailangang mag-login ulit tuwing
+# may action ang isang user (Balance, Orders, atbp). Naka-store dito ang
+# session galing sa huling successful login niya.
+_session_cache = {}  # telegram_id -> {"session": ..., "cached_at": ...}
+_SESSION_MAX_AGE = 1800  # 30 minuto bago natin subukang i-refresh
 
 
 def login(username: str, password: str) -> requests.Session:
@@ -101,3 +109,26 @@ def get_total_spend(session: requests.Session) -> float:
             total += float(match.group().replace(",", ""))
 
     return round(total, 2)
+def cache_session(telegram_id, session: requests.Session):
+    _session_cache[telegram_id] = {"session": session, "cached_at": time.time()}
+
+
+def get_authenticated_session(telegram_id, username: str, password: str) -> requests.Session:
+    """Ginagamit muli ang naka-cache na session kung bago pa siya at gumagana pa —
+    kung wala o expired na, saka lang mag-loo-login ulit sa likod (walang kailangang
+    i-type ulit na password ng user, gagawin lang ito ng bot mismo sa background)."""
+    cached = _session_cache.get(telegram_id)
+
+    if cached and (time.time() - cached["cached_at"]) < _SESSION_MAX_AGE:
+        session = cached["session"]
+        try:
+            resp = session.get(USER_SITE_URL + "/", timeout=15)
+            if "Login To" not in resp.text:
+                return session  # gumagana pa ang naka-cache na session
+        except Exception:
+            pass
+
+    # Kailangan nang mag-login ulit sa likod
+    session = login(username, password)
+    cache_session(telegram_id, session)
+    return session

@@ -124,7 +124,7 @@ async def menu_callback(update, context):
             )
             return
         try:
-            session = user_site.login(account["site_username"], account["site_password"])
+            session = user_site.get_authenticated_session(user_id, account["site_username"], account["site_password"])
             balance = user_site.get_balance(session)
             await query.edit_message_text(f"💰 Balance: ₱{balance:,.2f}", reply_markup=back_button())
         except Exception as e:
@@ -140,7 +140,7 @@ async def menu_callback(update, context):
             )
             return
         try:
-            session = user_site.login(account["site_username"], account["site_password"])
+            session = user_site.get_authenticated_session(user_id, account["site_username"], account["site_password"])
             orders = user_site.get_orders(session, limit=10)
         except Exception as e:
             await query.edit_message_text(f"⚠️ Couldn't fetch orders: {e}", reply_markup=back_button())
@@ -163,7 +163,7 @@ async def menu_callback(update, context):
             )
             return
         try:
-            session = user_site.login(account["site_username"], account["site_password"])
+            session = user_site.get_authenticated_session(user_id, account["site_username"], account["site_password"])
             total = user_site.get_total_spend(session)
             await query.edit_message_text(f"💵 Total Spend: ₱{total:,.2f}", reply_markup=back_button())
         except Exception as e:

@@ -52,6 +52,7 @@ async def handle_signin_text(update, context) -> bool:
 
         try:
             session = user_site.login(username, password)
+            user_site.cache_session(user_id, session)
         except user_site.UserLoginError:
             await status_msg.edit_text("❌ Invalid username or password. Please try /signin again.")
             return True
