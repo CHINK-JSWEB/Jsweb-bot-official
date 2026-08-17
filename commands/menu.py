@@ -172,6 +172,10 @@ async def menu_callback(update, context):
 
 
 async def handle_menu_text(update, context):
+    from commands.schedule import handle_schedule_text
+    if await handle_schedule_text(update, context):
+        return
+
     from commands.autoverify import handle_addfunds_text
     if await handle_addfunds_text(update, context):
         return

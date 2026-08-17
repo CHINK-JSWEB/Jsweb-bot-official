@@ -73,16 +73,19 @@ def init_db():
                 price       REAL,
                 updated_at  INTEGER
             );
+
             CREATE TABLE IF NOT EXISTS bot_meta (
                 key         TEXT PRIMARY KEY,
                 value       TEXT
             );
+
             CREATE TABLE IF NOT EXISTS user_accounts (
                 telegram_id TEXT PRIMARY KEY,
                 site_username TEXT,
                 site_password TEXT,
                 linked_at   INTEGER
             );
+
             CREATE TABLE IF NOT EXISTS tracked_orders (
                 telegram_id TEXT,
                 order_id    TEXT,
@@ -90,17 +93,28 @@ def init_db():
                 updated_at  INTEGER,
                 PRIMARY KEY (telegram_id, order_id)
             );
+
             CREATE TABLE IF NOT EXISTS used_video_hashes (
                 video_hash  TEXT PRIMARY KEY,
                 telegram_id TEXT,
                 amount      REAL,
                 used_at     INTEGER
             );
+
             CREATE TABLE IF NOT EXISTS used_gcash_refs (
                 ref_no      TEXT PRIMARY KEY,
                 telegram_id TEXT,
                 amount      REAL,
                 used_at     INTEGER
+            );
+
+            CREATE TABLE IF NOT EXISTS scheduled_orders (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id TEXT,
+                items_json  TEXT,
+                scheduled_at INTEGER,
+                status      TEXT DEFAULT 'pending',
+                created_at  INTEGER
             );
             """
         )
@@ -344,6 +358,15 @@ def dashboard_last_sync():
     with get_conn() as conn:
         row = conn.execute("SELECT MAX(updated_at) as t FROM dashboard_services").fetchone()
         return row["t"] if row and row["t"] else None
+
+
+def get_dashboard_service(local_id: str):
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM dashboard_services WHERE local_id = ?", (local_id,)
+        ).fetchone()
+
+
 # ── User/Booster Site Accounts ──────────────────────────────
 
 def save_user_account(telegram_id: int, username: str, password: str):
@@ -368,17 +391,15 @@ def get_user_account(telegram_id: int):
 def delete_user_account(telegram_id: int):
     with get_conn() as conn:
         conn.execute("DELETE FROM user_accounts WHERE telegram_id = ?", (str(telegram_id),))
-        
-def get_dashboard_service(local_id: str):
-    with get_conn() as conn:
-        return conn.execute(
-            "SELECT * FROM dashboard_services WHERE local_id = ?", (local_id,)
-        ).fetchone()
-        
+
+
 def get_all_user_accounts():
     with get_conn() as conn:
         return conn.execute("SELECT * FROM user_accounts").fetchall()
-        
+
+
+# ── Order Status Tracking ────────────────────────────────────
+
 def get_tracked_status(telegram_id, order_id: str):
     with get_conn() as conn:
         row = conn.execute(
@@ -397,7 +418,8 @@ def set_tracked_status(telegram_id, order_id: str, status: str):
             "last_status=excluded.last_status, updated_at=excluded.updated_at",
             (str(telegram_id), order_id, status, int(time.time())),
         )
-        
+
+
 def has_tracked_orders(telegram_id) -> bool:
     with get_conn() as conn:
         row = conn.execute(
@@ -405,6 +427,10 @@ def has_tracked_orders(telegram_id) -> bool:
             (str(telegram_id),),
         ).fetchone()
         return row is not None
+
+
+# ── GCash Ref / Video Dedup (legacy, kept for compatibility) ──
+
 def is_ref_used(ref_no: str) -> bool:
     with get_conn() as conn:
         row = conn.execute("SELECT 1 FROM used_gcash_refs WHERE ref_no = ?", (ref_no,)).fetchone()
@@ -417,7 +443,8 @@ def mark_ref_used(ref_no: str, telegram_id, amount: float):
             "INSERT OR IGNORE INTO used_gcash_refs (ref_no, telegram_id, amount, used_at) VALUES (?, ?, ?, ?)",
             (ref_no, str(telegram_id), amount, int(time.time())),
         )
-        
+
+
 def is_video_used(video_hash: str) -> bool:
     with get_conn() as conn:
         row = conn.execute("SELECT 1 FROM used_video_hashes WHERE video_hash = ?", (video_hash,)).fetchone()
@@ -430,6 +457,10 @@ def mark_video_used(video_hash: str, telegram_id, amount: float):
             "INSERT OR IGNORE INTO used_video_hashes (video_hash, telegram_id, amount, used_at) VALUES (?, ?, ?, ?)",
             (video_hash, str(telegram_id), amount, int(time.time())),
         )
+
+
+# ── Bot Meta (key-value store) ───────────────────────────────
+
 def set_meta(key: str, value: str):
     with get_conn() as conn:
         conn.execute(
@@ -443,3 +474,28 @@ def get_meta(key: str):
     with get_conn() as conn:
         row = conn.execute("SELECT value FROM bot_meta WHERE key = ?", (key,)).fetchone()
         return row["value"] if row else None
+
+
+# ── Scheduled Orders ──────────────────────────────────────────
+
+def create_scheduled_order(telegram_id, items_json: str, scheduled_at: int) -> int:
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO scheduled_orders (telegram_id, items_json, scheduled_at, status, created_at) "
+            "VALUES (?, ?, ?, 'pending', ?)",
+            (str(telegram_id), items_json, scheduled_at, int(time.time())),
+        )
+        return cur.lastrowid
+
+
+def get_due_scheduled_orders(now_ts: int):
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM scheduled_orders WHERE status = 'pending' AND scheduled_at <= ?",
+            (now_ts,),
+        ).fetchall()
+
+
+def mark_scheduled_order_sent(order_id: int):
+    with get_conn() as conn:
+        conn.execute("UPDATE scheduled_orders SET status = 'sent' WHERE id = ?", (order_id,))
