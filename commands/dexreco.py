@@ -38,7 +38,7 @@ def _build_dexreco_text() -> str:
         out.append(f"{emoji} {bold_sans(platform.upper())}")
 
         for item in items:
-            row = db.find_dashboard_by_panel_id(item["panel_id"])
+            row = db.find_dashboard_by_panel_id(item["panel_id"], provider_contains="dexbelle")
             if row:
                 out.append(f"▫️ {row['local_id']} — {item['name'][:60]} ({CURRENCY}{row['price']:,.2f})")
             else:

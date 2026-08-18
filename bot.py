@@ -113,7 +113,6 @@ def main():
     app.add_handler(CommandHandler("calc", calc_start))
     app.add_handler(CommandHandler("leaderboard", leaderboard_command))
     app.add_handler(CommandHandler("schedule", schedule_start))
-
     # Admin commands
     app.add_handler(CommandHandler("pending", pending))
     app.add_handler(CommandHandler("approve", approve))
@@ -141,7 +140,6 @@ def main():
 
     app.job_queue.run_repeating(check_all_orders, interval=600, first=60)
     app.job_queue.run_repeating(check_scheduled_orders, interval=30, first=15)
-
     logger.info("JSWEB bot starting...")
     app.run_polling()
 

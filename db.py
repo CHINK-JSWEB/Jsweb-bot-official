@@ -333,8 +333,13 @@ def sync_dashboard_services(rows: list[dict]):
             )
 
 
-def find_dashboard_by_panel_id(panel_id: str):
+def find_dashboard_by_panel_id(panel_id: str, provider_contains: str = None):
     with get_conn() as conn:
+        if provider_contains:
+            return conn.execute(
+                "SELECT * FROM dashboard_services WHERE panel_id = ? AND provider LIKE ?",
+                (panel_id, f"%{provider_contains}%"),
+            ).fetchone()
         return conn.execute(
             "SELECT * FROM dashboard_services WHERE panel_id = ?", (panel_id,)
         ).fetchone()
