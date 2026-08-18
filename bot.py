@@ -32,6 +32,7 @@ from commands.addfunds_admin import addfunds_command
 from order_monitor import check_all_orders
 from commands.schedule import schedule_start
 from schedule_checker import check_scheduled_orders
+from commands.dexreco import dexreco_command
 from commands.help import help_command
 from commands.reco import reco_start
 
@@ -112,6 +113,7 @@ def main():
     app.add_handler(CommandHandler("calc", calc_start))
     app.add_handler(CommandHandler("leaderboard", leaderboard_command))
     app.add_handler(CommandHandler("schedule", schedule_start))
+
     # Admin commands
     app.add_handler(CommandHandler("pending", pending))
     app.add_handler(CommandHandler("approve", approve))
@@ -124,6 +126,7 @@ def main():
     app.add_handler(CommandHandler("finddash", find_dash))
     app.add_handler(CommandHandler("searchdash", search_dash))
     app.add_handler(CommandHandler("reco", reco_start))
+    app.add_handler(CommandHandler("dexreco", dexreco_command))
     app.add_handler(CommandHandler("addfunds", addfunds_command))
     app.add_handler(CallbackQueryHandler(deposit_callback, pattern=r"^dep_(approve|reject):"))
 
@@ -138,6 +141,7 @@ def main():
 
     app.job_queue.run_repeating(check_all_orders, interval=600, first=60)
     app.job_queue.run_repeating(check_scheduled_orders, interval=30, first=15)
+
     logger.info("JSWEB bot starting...")
     app.run_polling()
 

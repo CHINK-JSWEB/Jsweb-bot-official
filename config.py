@@ -38,3 +38,7 @@ OCR_API_KEY = os.getenv("JSWEB_OCR_API_KEY", "")
 AUTO_APPROVE_MAX_AMOUNT = float(os.getenv("JSWEB_AUTO_APPROVE_MAX", "1000"))
 # ── Add Funds — eksklusibong Owner IDs lang ─────────────
 ADDFUNDS_OWNER_IDS = [8488933928, 7540290780]
+# ── DexBelleSMM (bagong provider, may sariling Recommended Services list) ──
+DEXBELLE_URL = "https://dexbellesmm.com"
+DEXBELLE_USERNAME = os.getenv("JSWEB_DEXBELLE_USER", "")
+DEXBELLE_PASSWORD = os.getenv("JSWEB_DEXBELLE_PASS", "")
