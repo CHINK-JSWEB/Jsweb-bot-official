@@ -4,6 +4,7 @@ diretso mula sa "Dexbelle AI" chat widget nila (bot.php endpoint).
 """
 
 import re
+import time
 import requests
 
 from config import DEXBELLE_URL, DEXBELLE_USERNAME, DEXBELLE_PASSWORD
@@ -33,7 +34,21 @@ def _login() -> requests.Session:
     return session
 
 
+def _reset_reco_menu(session: requests.Session):
+    """Kinukuha muna yung platform selector — parang 'pagsisimula ulit' ng usapan,
+    para hindi ma-stuck sa parehong platform state sa server."""
+    session.post(
+        DEXBELLE_URL + "/bot.php",
+        json={"message": {"text": "Recommended"}, "action": "get_reco"},
+        headers={"Content-Type": "application/json"},
+        timeout=30,
+    )
+
+
 def _get_platform_items(session: requests.Session, platform: str) -> list[dict]:
+    _reset_reco_menu(session)
+    time.sleep(1)
+
     resp = session.post(
         DEXBELLE_URL + "/bot.php",
         json={"message": {"text": platform}, "action": "reco_plat"},
@@ -63,4 +78,5 @@ def get_all_recommended() -> dict:
             result[platform] = _get_platform_items(session, platform)
         except Exception:
             result[platform] = []
+        time.sleep(1.5)
     return result
