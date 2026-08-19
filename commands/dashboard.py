@@ -57,9 +57,9 @@ async def find_dash(update, context):
     for row in rows:
         name_part = f" — {row['name'][:60]}" if row["name"] else ""
         provider_label = row["provider"] or "Unknown provider"
-        lines.append(f"📦 [{provider_label}] Local ID *{row['local_id']}*{name_part}")
+        lines.append(f"📦 [{provider_label}] Local ID {row['local_id']}{name_part}")
 
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    await update.message.reply_text("\n".join(lines))
 
 
 async def search_dash(update, context):
