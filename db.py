@@ -504,3 +504,8 @@ def get_due_scheduled_orders(now_ts: int):
 def mark_scheduled_order_sent(order_id: int):
     with get_conn() as conn:
         conn.execute("UPDATE scheduled_orders SET status = 'sent' WHERE id = ?", (order_id,))
+def find_all_dashboard_by_panel_id(panel_id: str):
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM dashboard_services WHERE panel_id = ?", (panel_id,)
+        ).fetchall()

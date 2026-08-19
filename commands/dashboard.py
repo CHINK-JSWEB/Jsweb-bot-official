@@ -32,15 +32,15 @@ async def sync_dashboard(update, context):
 
 
 async def find_dash(update, context):
-    """Kahit sino: /finddash <panel_id> — hahanapin ang katumbas na local ID."""
+    """Kahit sino: /finddash <panel_id> — hahanapin ang lahat ng tugma (kahit ilang provider)."""
     if not context.args:
         await update.message.reply_text("Usage: /finddash <panel_id>\nHal: /finddash 76")
         return
 
     panel_id = context.args[0]
-    row = db.find_dashboard_by_panel_id(panel_id)
+    rows = db.find_all_dashboard_by_panel_id(panel_id)
 
-    if not row:
+    if not rows:
         count = db.dashboard_services_count()
         if count == 0:
             await update.message.reply_text(
@@ -53,12 +53,13 @@ async def find_dash(update, context):
             )
         return
 
-    await update.message.reply_text(
-        f"🔎 Panel ID `{panel_id}` → Local ID *{row['local_id']}*\n"
-        f"📌 {row['name']}\n"
-        f"💰 {CURRENCY}{row['price']:,.2f}",
-        parse_mode="Markdown"
-    )
+    lines = [f"🔎 Panel ID {panel_id} — {len(rows)} match(es):\n"]
+    for row in rows:
+        name_part = f" — {row['name'][:60]}" if row["name"] else ""
+        provider_label = row["provider"] or "Unknown provider"
+        lines.append(f"📦 [{provider_label}] Local ID *{row['local_id']}*{name_part}")
+
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
 
 async def search_dash(update, context):
