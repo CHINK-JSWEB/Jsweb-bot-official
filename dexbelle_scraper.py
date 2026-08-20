@@ -46,12 +46,9 @@ def _reset_reco_menu(session: requests.Session):
 
 
 def _get_platform_items(session: requests.Session, platform: str) -> list[dict]:
-    _reset_reco_menu(session)
-    time.sleep(1)
-
     resp = session.post(
         DEXBELLE_URL + "/bot.php",
-        json={"message": {"text": platform}, "action": "reco_plat"},
+        json={"action": "reco_plat", "platform": platform},
         headers={"Content-Type": "application/json"},
         timeout=30,
     )
